@@ -1,9 +1,9 @@
 use windows::{ Win32::Foundation::*, Win32::System::SystemServices::* };
-use windows::{ core::*, Win32::UI::WindowsAndMessaging::MessageBoxA };
+use windows::{ core::*, Win32::UI::WindowsAndMessaging::MessageBoxW };
 
 #[no_mangle]
 #[allow(no_snake_case, unused_variables)]
-extern "system" fn Dllmain(dll_module: HINSTANCE, call_reason: u32, _: *mut ()) -> bool {
+extern "system" fn DllMain(dll_module: HINSTANCE, call_reason: u32, _: *mut ()) -> bool {
     match call_reason {
         DLL_PROCESS_ATTACH => attach(),
         DLL_PROCESS_DETACH => detach(),
@@ -15,10 +15,10 @@ extern "system" fn Dllmain(dll_module: HINSTANCE, call_reason: u32, _: *mut ()) 
 
 fn attach() {
     unsafe {
-        MessageBoxA(
+        MessageBoxW(
             HWND(0),
-            s!("WELCOME!"),
-            s!("Hello World"),
+            w!("WELCOME!"),
+            w!("Hello World"),
             Default::default()
         );
     };
@@ -26,10 +26,10 @@ fn attach() {
 
 fn detach() {
     unsafe {
-        MessageBoxA(
+        MessageBoxW(
             HWND(0),
-            s!("GOODBYE!"),
-            s!("Hello World"),
+            w!("GOODBYE!"),
+            w!("Hello World"),
             Default::default()
         );
     };
