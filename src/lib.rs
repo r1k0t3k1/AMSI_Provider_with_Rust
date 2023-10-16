@@ -1,21 +1,17 @@
-#![feature(lazy_cell)]
-
 use std::ffi::c_void;
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{ AtomicUsize, Ordering };
 use windows::{ Win32::Foundation::*, Win32::System::SystemServices::* };
-use windows::Win32::System::Com::CoInitialize;
-use windows::Win32::System::LibraryLoader::GetModuleFileNameA;
+use windows::Win32::System::Com::{ CoInitialize, StringFromCLSID };
 use windows::Win32::System::LibraryLoader::GetModuleFileNameW;
 use windows::{ core::*, Win32::UI::WindowsAndMessaging::MessageBoxW };
 use windows::Win32::UI::WindowsAndMessaging::MessageBoxA;
-use std::sync::Mutex;
+use windows::Win32::System::Registry::{RegCreateKeyExW, HKEY_CLASSES_ROOT, REG_OPTION_NON_VOLATILE, KEY_SET_VALUE, KEY_CREATE_SUB_KEY, HKEY};
 use std::sync::OnceLock;
 
 static G_MODULE: OnceLock<HMODULE> = OnceLock::new();
 
 
-pub const CLSID_AMSI_PROVIDER: GUID = GUID::from_u128(0x35817bc3d875e537b9f86103d91841e9);
+const CLSID_AMSI_PROVIDER: GUID = GUID::from_u128(0x35817bc3d875e537b9f86103d91841e9);
 const IID_I_CLASS_FACTORY: GUID = GUID::from_u128(0x0000000100000000C0000000000000046);
 
 static DLL_REF_COUNT: AtomicUsize = AtomicUsize::new(0);
@@ -72,17 +68,49 @@ pub extern "stdcall" fn DllGetClassObject(
 #[no_mangle]
 pub extern "stdcall" fn DllRegisterServer() {
    let _ = unsafe { CoInitialize(None) }; 
-   let mut lpfilename = [0u8;1000];
-   let iret: u32 = unsafe{ GetModuleFileNameA(*G_MODULE.get().unwrap(), &mut lpfilename) };
+   let mut lpfilename = [0u16;300];
+
+   let iret: u32 = unsafe{ GetModuleFileNameW(*G_MODULE.get().unwrap(), &mut lpfilename) };
+
    if iret == 0 {
      let err = unsafe { GetLastError() };
      println!("{:?}", err);
      return;
    }
+
+   let mut utf16_vec = lpfilename.to_vec();
+   utf16_vec.retain(|&x| x != 0);
+   let utf16_string = String::from_utf16(&utf16_vec).unwrap();
+
    unsafe {
-    //MessageBoxA(HWND(0), s!(""), PCSTR::from_raw(lpfilename.as_ptr()), Default::default());
-    println!("{:?}", lpfilename);
+    MessageBoxA(HWND(0), PCSTR::from_raw(utf16_string.as_ptr()), s!("DLL path"), Default::default());
    };
+
+   let CLSID = unsafe{ StringFromCLSID(&CLSID_AMSI_PROVIDER as *const GUID).unwrap() };
+   unsafe {
+    MessageBoxA(HWND(0), PCSTR::from_raw(CLSID.to_string().unwrap().as_ptr()), s!("CLSID"), Default::default());
+   };
+   let prefix = [67u16,76u16,83u16,73u16,68u16,92u16,92u16].as_slice();
+   let cls_string = unsafe{ CLSID.as_wide() };
+   
+   let szRegKey = [prefix, &cls_string].concat();
+   let szAMSIProvider = format!("Software\\Microsoft\\AMSI\\Providers\\{:?}", CLSID);
+
+   let mut phkresult = HKEY::default();
+   unsafe {
+     let result = RegCreateKeyExW(
+       HKEY_CLASSES_ROOT,
+       PCWSTR::from_raw(szRegKey.as_ptr()),
+       0,
+       PCWSTR::null(),
+       REG_OPTION_NON_VOLATILE,
+       KEY_SET_VALUE | KEY_CREATE_SUB_KEY,
+       None,
+       &mut phkresult as *mut HKEY,
+       None,
+     );
+   }
+   println!("{:?}", phkresult);
 }
 
 fn attach() {
