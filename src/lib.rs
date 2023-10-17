@@ -5,7 +5,7 @@ use windows::Win32::System::Com::{ CoInitialize, StringFromCLSID };
 use windows::Win32::System::LibraryLoader::GetModuleFileNameW;
 use windows::{ core::*, Win32::UI::WindowsAndMessaging::MessageBoxW };
 use windows::Win32::UI::WindowsAndMessaging::MessageBoxA;
-use windows::Win32::System::Registry::{RegCreateKeyExW, HKEY_CLASSES_ROOT, REG_OPTION_NON_VOLATILE, KEY_SET_VALUE, KEY_CREATE_SUB_KEY, HKEY};
+use windows::Win32::System::Registry::{RegCreateKeyExW, HKEY_CLASSES_ROOT, REG_OPTION_NON_VOLATILE, KEY_SET_VALUE, KEY_CREATE_SUB_KEY, HKEY, RegSetValueExW, REG_SZ};
 use std::sync::OnceLock;
 
 static G_MODULE: OnceLock<HMODULE> = OnceLock::new();
@@ -95,7 +95,7 @@ pub extern "stdcall" fn DllRegisterServer() {
    let szRegKey = format!("{}{}", String::from("CLSID\\"), &CLSID);
    let szAMSIProvider = format!("Software\\Microsoft\\AMSI\\Providers\\{:?}", CLSID);
 
-   let mut phkresult = HKEY::default();
+   let mut clsid_phkresult = HKEY::default();
 
    unsafe {
      let result = RegCreateKeyExW(
@@ -106,11 +106,22 @@ pub extern "stdcall" fn DllRegisterServer() {
        REG_OPTION_NON_VOLATILE,
        KEY_SET_VALUE | KEY_CREATE_SUB_KEY,
        None,
-       &mut phkresult as *mut HKEY,
+       &mut clsid_phkresult as *mut HKEY,
        None,
      );
    }
-   println!("{:?}", phkresult);
+   println!("{:?}", clsid_phkresult);
+  
+   // TODO Auto generate
+   let Description: [u8;32] =
+   [77,0,121,0,32,0,65,0,77,0,83,0,73,0,32,0,80,0,114,0,111,0,118,0,105,0,100,0,101,0,114,0];
+
+   unsafe {
+    let result = RegSetValueExW(clsid_phkresult, PCWSTR::null(), 0, REG_SZ, Some(&Description));
+    println!("{:?}", result);
+   }
+   let szAMSIProvider = format!("Software\\Microsoft\\AMSI\\Providers\\{:?}", CLSID);
+
 }
 
 fn attach() {
