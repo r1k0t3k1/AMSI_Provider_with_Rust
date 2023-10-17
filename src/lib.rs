@@ -83,24 +83,24 @@ pub extern "stdcall" fn DllRegisterServer() {
    let utf16_string = String::from_utf16(&utf16_vec).unwrap();
 
    unsafe {
-    MessageBoxA(HWND(0), PCSTR::from_raw(utf16_string.as_ptr()), s!("DLL path"), Default::default());
+    MessageBoxW(HWND(0), &HSTRING::from(utf16_string), w!("DLL path"), Default::default());
    };
 
-   let CLSID = unsafe{ StringFromCLSID(&CLSID_AMSI_PROVIDER as *const GUID).unwrap() };
+   let CLSID = unsafe{ StringFromCLSID(&CLSID_AMSI_PROVIDER as *const GUID).unwrap().to_string().unwrap() };
+
    unsafe {
-    MessageBoxA(HWND(0), PCSTR::from_raw(CLSID.to_string().unwrap().as_ptr()), s!("CLSID"), Default::default());
+    MessageBoxW(HWND(0), &HSTRING::from(CLSID.clone()), w!("CLSID"), Default::default());
    };
-   let prefix = [67u16,76u16,83u16,73u16,68u16,92u16,92u16].as_slice();
-   let cls_string = unsafe{ CLSID.as_wide() };
-   
-   let szRegKey = [prefix, &cls_string].concat();
+
+   let szRegKey = format!("{}{}", String::from("CLSID\\"), &CLSID);
    let szAMSIProvider = format!("Software\\Microsoft\\AMSI\\Providers\\{:?}", CLSID);
 
    let mut phkresult = HKEY::default();
+
    unsafe {
      let result = RegCreateKeyExW(
        HKEY_CLASSES_ROOT,
-       PCWSTR::from_raw(szRegKey.as_ptr()),
+       &HSTRING::from(szRegKey),
        0,
        PCWSTR::null(),
        REG_OPTION_NON_VOLATILE,
