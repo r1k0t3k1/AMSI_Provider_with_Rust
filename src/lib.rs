@@ -1,7 +1,8 @@
 use std::ffi::c_void;
+use std::mem;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::OnceLock;
-use windows::Win32::System::Com::{CoInitialize, StringFromCLSID};
+use windows::Win32::System::Com::{CoInitialize, StringFromCLSID, IClassFactory};
 use windows::Win32::System::LibraryLoader::GetModuleFileNameW;
 use windows::Win32::System::Registry::{
     RegCloseKey, RegCreateKeyExW, RegDeleteKeyExW, RegDeleteTreeW, RegOpenKeyExW, RegSetValueExW,
@@ -13,7 +14,10 @@ use windows::{core::*, Win32::UI::WindowsAndMessaging::MessageBoxW};
 use windows::{Win32::Foundation::*, Win32::System::SystemServices::*};
 
 mod amsi_provider;
-use amsi_provider::AMSI_Provider;
+use amsi_provider::AMSIProvider;
+
+mod amsi_provider_factory;
+use amsi_provider_factory::AMSIProviderFactory;
 
 static G_MODULE: OnceLock<HMODULE> = OnceLock::new();
 
@@ -54,19 +58,24 @@ pub extern "stdcall" fn DllGetClassObject(
     riid: *const GUID,
     ppv: *mut *mut c_void,
 ) -> HRESULT {
-    let rclsid = &unsafe { *rclsid };
-    let riid = &unsafe { *riid };
-    let ppv = unsafe { &mut *ppv };
+    if ppv.is_null() {
+        return E_POINTER;
+    }
+    unsafe{ *ppv = std::ptr::null_mut() };
 
-    *ppv = std::ptr::null_mut();
+    if rclsid.is_null() || riid.is_null() {
+        return E_INVALIDARG;
+    }
 
-    if *rclsid != CLSID_AMSI_PROVIDER {
+    let rclsid = unsafe { *rclsid };
+    let riid = unsafe { *riid };
+
+    if rclsid != CLSID_AMSI_PROVIDER || riid != IClassFactory::IID {
         return CLASS_E_CLASSNOTAVAILABLE;
     }
-
-    if *riid != IID_I_CLASS_FACTORY {
-        return E_UNEXPECTED;
-    }
+    
+    let factory: IClassFactory = AMSIProviderFactory.into();
+    unsafe { *ppv = mem::transmute(factory) };
 
     S_OK
 }
