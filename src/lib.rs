@@ -4,12 +4,16 @@ use std::sync::OnceLock;
 use windows::Win32::System::Com::{CoInitialize, StringFromCLSID};
 use windows::Win32::System::LibraryLoader::GetModuleFileNameW;
 use windows::Win32::System::Registry::{
-    RegCreateKeyExW, RegSetValueExW, HKEY, HKEY_CLASSES_ROOT, KEY_CREATE_SUB_KEY, KEY_SET_VALUE,
-    REG_OPTION_NON_VOLATILE, REG_SZ, RegCloseKey, HKEY_LOCAL_MACHINE,
+    RegCloseKey, RegCreateKeyExW, RegDeleteKeyExW, RegDeleteTreeW, RegOpenKeyExW, RegSetValueExW,
+    HKEY, HKEY_CLASSES_ROOT, HKEY_LOCAL_MACHINE, KEY_CREATE_SUB_KEY, KEY_SET_VALUE,
+    REG_OPTION_NON_VOLATILE, REG_SZ,
 };
 use windows::Win32::UI::WindowsAndMessaging::MessageBoxA;
 use windows::{core::*, Win32::UI::WindowsAndMessaging::MessageBoxW};
 use windows::{Win32::Foundation::*, Win32::System::SystemServices::*};
+
+mod amsi_provider;
+use amsi_provider::AMSI_Provider;
 
 static G_MODULE: OnceLock<HMODULE> = OnceLock::new();
 
@@ -35,12 +39,13 @@ extern "system" fn DllMain(dll_module: HMODULE, call_reason: u32, _: *mut ()) ->
 
 #[no_mangle]
 pub extern "stdcall" fn DllCanUnloadNow() -> HRESULT {
-    let ref_count = DLL_REF_COUNT.load(Ordering::SeqCst);
-    if ref_count == 0 {
-        S_OK
-    } else {
-        S_FALSE
-    }
+    S_OK
+    //let ref_count = DLL_REF_COUNT.load(Ordering::SeqCst);
+    //if ref_count == 0 {
+    //    S_OK
+    //} else {
+    //    S_FALSE
+    //}
 }
 
 #[no_mangle]
@@ -225,7 +230,7 @@ pub extern "stdcall" fn DllRegisterServer() {
         }
     }
 
-    unsafe { 
+    unsafe {
         RegCloseKey(inprocserver_phkresult);
         RegCloseKey(clsid_phkresult);
     }
@@ -253,6 +258,41 @@ pub extern "stdcall" fn DllRegisterServer() {
                 w!("CLSID"),
                 Default::default(),
             );
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "stdcall" fn DllUnregisterServer() {
+    let CLSID = unsafe {
+        StringFromCLSID(&CLSID_AMSI_PROVIDER as *const GUID)
+            .unwrap()
+            .to_string()
+            .unwrap()
+    };
+
+    let szRegKey = format!("{}{}", String::from("CLSID\\"), &CLSID);
+    let szAMSIProvider = format!("Software\\Microsoft\\AMSI\\Providers\\{}", &CLSID);
+
+    unsafe {
+        if RegDeleteTreeW(HKEY_CLASSES_ROOT, &HSTRING::from(szRegKey)).is_err() {
+            MessageBoxW(
+                HWND(0),
+                w!("Failed to Delete CLSID sub key."),
+                w!("CLSID"),
+                Default::default(),
+            );
+            return;
+        }
+
+        if RegDeleteTreeW(HKEY_LOCAL_MACHINE, &HSTRING::from(szAMSIProvider)).is_err() {
+            MessageBoxW(
+                HWND(0),
+                w!("Failed to Delete Providers sub key."),
+                w!("CLSID"),
+                Default::default(),
+            );
+            return;
         }
     }
 }

@@ -17,5 +17,7 @@ features = [
     "Win32_System_Com",
     "Win32_System_LibraryLoader",
     "Win32_System_Registry",
-    "Win32_Security"
+    "Win32_System_Antimalware",
+    "Win32_Security",
+    "implement",
 ]
