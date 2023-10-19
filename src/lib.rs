@@ -1,8 +1,9 @@
+#![feature(slice_flatten)]
 use std::ffi::c_void;
 use std::mem;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::OnceLock;
-use windows::Win32::System::Com::{CoInitialize, StringFromCLSID, IClassFactory};
+use windows::Win32::System::Com::{CoInitialize, IClassFactory, StringFromCLSID};
 use windows::Win32::System::LibraryLoader::GetModuleFileNameW;
 use windows::Win32::System::Registry::{
     RegCloseKey, RegCreateKeyExW, RegDeleteKeyExW, RegDeleteTreeW, RegOpenKeyExW, RegSetValueExW,
@@ -18,6 +19,7 @@ use amsi_provider::AMSIProvider;
 
 mod amsi_provider_factory;
 use amsi_provider_factory::AMSIProviderFactory;
+
 
 static G_MODULE: OnceLock<HMODULE> = OnceLock::new();
 
@@ -61,7 +63,7 @@ pub extern "stdcall" fn DllGetClassObject(
     if ppv.is_null() {
         return E_POINTER;
     }
-    unsafe{ *ppv = std::ptr::null_mut() };
+    unsafe { *ppv = std::ptr::null_mut() };
 
     if rclsid.is_null() || riid.is_null() {
         return E_INVALIDARG;
@@ -73,7 +75,7 @@ pub extern "stdcall" fn DllGetClassObject(
     if rclsid != CLSID_AMSI_PROVIDER || riid != IClassFactory::IID {
         return CLASS_E_CLASSNOTAVAILABLE;
     }
-    
+
     let factory: IClassFactory = AMSIProviderFactory.into();
     unsafe { *ppv = mem::transmute(factory) };
 
@@ -81,7 +83,7 @@ pub extern "stdcall" fn DllGetClassObject(
 }
 
 #[no_mangle]
-pub extern "stdcall" fn DllRegisterServer() {
+pub extern "stdcall" fn DllRegisterServer() -> HRESULT {
     let _ = unsafe { CoInitialize(None) };
     let mut lpfilename = [0u16; 300];
 
@@ -90,36 +92,18 @@ pub extern "stdcall" fn DllRegisterServer() {
     if iret == 0 {
         let err = unsafe { GetLastError() };
         println!("{:?}", err);
-        return;
+        return S_FALSE;
     }
 
     let mut utf16_vec = lpfilename.to_vec();
     utf16_vec.retain(|&x| x != 0);
     let utf16_string = String::from_utf16(&utf16_vec).unwrap();
 
-    unsafe {
-        MessageBoxW(
-            HWND(0),
-            &HSTRING::from(utf16_string.clone()),
-            w!("DLL path"),
-            Default::default(),
-        );
-    };
-
     let CLSID = unsafe {
         StringFromCLSID(&CLSID_AMSI_PROVIDER as *const GUID)
             .unwrap()
             .to_string()
             .unwrap()
-    };
-
-    unsafe {
-        MessageBoxW(
-            HWND(0),
-            &HSTRING::from(CLSID.clone()),
-            w!("CLSID"),
-            Default::default(),
-        );
     };
 
     let szRegKey = format!("{}{}", String::from("CLSID\\"), &CLSID);
@@ -162,6 +146,7 @@ pub extern "stdcall" fn DllRegisterServer() {
                 w!("CLSID"),
                 Default::default(),
             );
+            return S_FALSE;
         }
     }
 
@@ -186,6 +171,7 @@ pub extern "stdcall" fn DllRegisterServer() {
                 w!("CLSID"),
                 Default::default(),
             );
+            return S_FALSE;
         }
     }
 
@@ -211,6 +197,7 @@ pub extern "stdcall" fn DllRegisterServer() {
                 w!("CLSID"),
                 Default::default(),
             );
+            return S_FALSE;
         }
     }
 
@@ -236,6 +223,7 @@ pub extern "stdcall" fn DllRegisterServer() {
                 w!("CLSID"),
                 Default::default(),
             );
+            return S_FALSE;
         }
     }
 
@@ -267,12 +255,14 @@ pub extern "stdcall" fn DllRegisterServer() {
                 w!("CLSID"),
                 Default::default(),
             );
+            return S_FALSE;
         }
     }
+    S_OK
 }
 
 #[no_mangle]
-pub extern "stdcall" fn DllUnregisterServer() {
+pub extern "stdcall" fn DllUnregisterServer() -> HRESULT {
     let CLSID = unsafe {
         StringFromCLSID(&CLSID_AMSI_PROVIDER as *const GUID)
             .unwrap()
@@ -291,7 +281,7 @@ pub extern "stdcall" fn DllUnregisterServer() {
                 w!("CLSID"),
                 Default::default(),
             );
-            return;
+            return S_FALSE;
         }
 
         if RegDeleteTreeW(HKEY_LOCAL_MACHINE, &HSTRING::from(szAMSIProvider)).is_err() {
@@ -301,34 +291,14 @@ pub extern "stdcall" fn DllUnregisterServer() {
                 w!("CLSID"),
                 Default::default(),
             );
-            return;
+            return S_FALSE;
         }
     }
+    S_OK
 }
 
 fn attach() {
-    unsafe {
-        MessageBoxW(
-            HWND(0),
-            w!("WELCOME!"),
-            w!("Hello World"),
-            Default::default(),
-        );
-    };
 }
 
 fn detach() {
-    unsafe {
-        MessageBoxW(
-            HWND(0),
-            w!("GOODBYE!"),
-            w!("Hello World"),
-            Default::default(),
-        );
-    };
-}
-
-#[no_mangle]
-pub extern "C" fn add(left: usize, right: usize) -> usize {
-    left + right
 }

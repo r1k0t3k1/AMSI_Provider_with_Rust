@@ -1,11 +1,13 @@
 use std::ffi::c_void;
-use std::{ptr, mem};
+use std::{mem, ptr};
 
-use windows::Win32::System::Antimalware::IAntimalwareProvider;
-use windows::core::{implement, Error, IUnknown, GUID};
-use windows::Win32::Foundation::{BOOL, E_NOTIMPL, E_POINTER, E_INVALIDARG, CLASS_E_NOAGGREGATION, E_NOINTERFACE};
-use windows::Win32::System::Com::{IClassFactory, IClassFactory_Impl};
 use windows::core::ComInterface;
+use windows::core::{implement, Error, IUnknown, GUID};
+use windows::Win32::Foundation::{
+    BOOL, CLASS_E_NOAGGREGATION, E_INVALIDARG, E_NOINTERFACE, E_NOTIMPL, E_POINTER,
+};
+use windows::Win32::System::Antimalware::IAntimalwareProvider;
+use windows::Win32::System::Com::{IClassFactory, IClassFactory_Impl};
 
 #[implement(IClassFactory)]
 #[allow(non_snake_case)]
