@@ -34,7 +34,6 @@ extern "system" fn DllMain(dll_module: HMODULE, call_reason: u32, _: *mut ()) ->
     match call_reason {
         DLL_PROCESS_ATTACH => {
             G_MODULE.set(dll_module).unwrap();
-            DllRegisterServer();
         }
         DLL_PROCESS_DETACH => (),
         _ => (),
