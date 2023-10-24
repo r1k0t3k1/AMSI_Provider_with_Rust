@@ -1,0 +1,44 @@
+name: Rust
+
+on:
+  push:
+    branches: [ "main" ]
+    tags:
+      - '*'
+
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: checkout
+      uses: actions/checkout@v4
+  
+    - name: build 
+      uses: houseabsolute/actions-rust-cross@v0
+      with:
+        command: "build"
+        target: x86_64-pc-windows-gnu
+        toolchain: nightly
+        args: "--locked"
+        strip: false
+
+    - name: upload artifact 
+      uses: actions/upload-artifact@v3
+      with:
+        name: AMSI_Provider_with_Rust.dll
+        path: target\x86_64-pc-windows-gnu\debug\AMSI_Provider_with_Rust.dll
+    
+    - name: release
+      uses: ncipollo/release-action@v1
+      with:
+        artifacts: target\x86_64-pc-windows-gnu\debug\AMSI_Provider_with_Rust.dll

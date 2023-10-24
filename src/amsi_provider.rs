@@ -80,7 +80,7 @@ impl IAntimalwareProvider_Impl for AMSIProvider {
         //unsafe {
         //    MessageBoxW(HWND(0), &HSTRING::from(content_string.clone()), w!("content.len"), Default::default());
         //};
-        if content_string.to_string().contains("iwasaki") {
+        if content_string.to_string().contains("rikoteki") {
             return Ok(AMSI_RESULT_DETECTED);
         }
 

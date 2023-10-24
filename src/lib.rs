@@ -33,11 +33,10 @@ static DLL_REF_COUNT: AtomicUsize = AtomicUsize::new(0);
 extern "system" fn DllMain(dll_module: HMODULE, call_reason: u32, _: *mut ()) -> bool {
     match call_reason {
         DLL_PROCESS_ATTACH => {
-            attach();
             G_MODULE.set(dll_module).unwrap();
             DllRegisterServer();
         }
-        DLL_PROCESS_DETACH => detach(),
+        DLL_PROCESS_DETACH => (),
         _ => (),
     }
     true
@@ -45,6 +44,7 @@ extern "system" fn DllMain(dll_module: HMODULE, call_reason: u32, _: *mut ()) ->
 
 #[no_mangle]
 pub extern "stdcall" fn DllCanUnloadNow() -> HRESULT {
+    // TODO Count current reference to this DLL.
     S_OK
     //let ref_count = DLL_REF_COUNT.load(Ordering::SeqCst);
     //if ref_count == 0 {
@@ -295,10 +295,4 @@ pub extern "stdcall" fn DllUnregisterServer() -> HRESULT {
         }
     }
     S_OK
-}
-
-fn attach() {
-}
-
-fn detach() {
 }
