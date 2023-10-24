@@ -29,7 +29,7 @@ jobs:
         command: "build"
         target: x86_64-pc-windows-gnu
         toolchain: nightly
-        args: "--locked"
+        args: ""
         strip: false
 
     - name: upload artifact 
