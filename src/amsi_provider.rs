@@ -77,12 +77,12 @@ impl IAntimalwareProvider_Impl for AMSIProvider {
        
 
         let content_string = String::from_utf16_lossy(content);
-        //unsafe {
-        //    MessageBoxW(HWND(0), &HSTRING::from(content_string.clone()), w!("content.len"), Default::default());
-        //};
-        if content_string.to_string().contains("tomato") {
-            return Ok(AMSI_RESULT_DETECTED);
-        }
+        unsafe {
+            MessageBoxW(HWND(0), &HSTRING::from(content_string.clone()), w!("content.len"), Default::default());
+        };
+        //if content_string.to_string().contains("tomato") {
+        //    return Ok(AMSI_RESULT_DETECTED);
+        //}
 
         Ok(AMSI_RESULT_CLEAN)
     }
